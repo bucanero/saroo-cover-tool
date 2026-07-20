@@ -31,6 +31,9 @@
     transition:background .12s,border-color .12s; text-decoration:none;
   }
   a.btn, a.btn:hover { color:var(--txt); }
+  a.btn.donate { color:#fff; background:#0070ba; border-color:#0070ba; }
+  a.btn.donate:hover { background:#005ea6; }
+  a.btn.donate svg { color:#ffc439; }
   button:hover, .btn:hover { background:#2c3142; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
   button.primary:hover { background:var(--accent2); }
@@ -131,10 +134,14 @@
 </head>
 <body>
 <header>
-  <h1>SAROO Cover Editor <small>web edition · cover.bin</small></h1>
+  <h1>SAROO Cover Editor <small>web edition · by <a href="https://github.com/bucanero/" target="_blank">Bucanero</a></small></h1>
   <a class="btn" href="https://github.com/bucanero/saroo-cover-editor" target="_blank" rel="noopener noreferrer" title="Open source repository on GitHub">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
     GitHub
+  </a>
+  <a class="btn donate" href="https://paypal.me/bucanerodev" target="_blank" rel="noopener noreferrer" title="Support the developer via PayPal">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    Support
   </a>
   <div class="spacer"></div>
   <button id="btnOpen">📂 Open cover.bin</button>
@@ -159,7 +166,7 @@
   <div class="grid" id="grid"></div>
   <div class="empty" id="emptyMsg" style="display:none">
     No covers loaded. Open a <code>cover.bin</code> or add an image.<br><br>
-    <a href="#" id="lnkSample" title="Download and parse a sample cover.bin (~30 MB) from GitHub Releases">Load the latest <code>cover.bin</code> from GitHub.</a>
+    <a href="#" id="lnkSample" title="Download and parse a cover.bin (~30 MB) from GitHub">Load the latest <code>cover.bin</code> from GitHub.</a>
   </div>
 </main>
 
@@ -546,21 +553,21 @@ async function loadCoverBin(file){
 $('btnOpen').onclick=()=>$('fileOpen').click();
 $('fileOpen').onchange=e=>{ if(e.target.files[0]) loadCoverBin(e.target.files[0]); e.target.value=''; };
 
-// Sample cover.bin hosted on GitHub Releases (~30 MB).
-const SAMPLE_URL='https://bucanero.github.io/saroo-cover-editor/cover.bin';
+// Get cover.bin hosted on GitHub (~30 MB).
+const COVERBIN_URL='https://bucanero.github.io/saroo-cover-editor/cover.bin';
 $('lnkSample').onclick=async(e)=>{
   e.preventDefault();
-  if(covers.length && !confirm('Discard current covers and load the sample cover.bin?')) return;
-  const lnk=$('lnkSample'); const label=lnk.textContent; lnk.textContent='Downloading sample (~30 MB)…'; lnk.style.pointerEvents='none';
-  toast('Downloading sample cover.bin (~30 MB)…');
+  if(covers.length && !confirm('Discard current covers and load the cover.bin?')) return;
+  const lnk=$('lnkSample'); const label=lnk.textContent; lnk.textContent='Downloading cover.bin (~30 MB)…'; lnk.style.pointerEvents='none';
+  toast('Downloading cover.bin (~30 MB)…');
   try{
-    const resp=await fetch(SAMPLE_URL);
+    const resp=await fetch(COVERBIN_URL);
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     const buf=await resp.arrayBuffer();
     covers=parseCoverBin(buf); render();
-    toast(`Loaded ${covers.length} covers from the sample cover.bin`,'ok');
+    toast(`Loaded ${covers.length} covers from the cover.bin`,'ok');
   }catch(err){
-    toast('Could not fetch sample: '+err.message+' — download it from the GitHub release and use Open cover.bin.','err');
+    toast('Could not fetch cover.bin: '+err.message+' — download it from the GitHub repository and use Open cover.bin.','err');
   }finally{ lnk.textContent=label; lnk.style.pointerEvents=''; }
 };
 
