@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SAROO Cover Tool — Web</title>
+<title>SAROO Cover Editor — Web</title>
 <style>
   :root {
     --bg:#12141a; --panel:#1b1e27; --panel2:#232734; --edge:#2f3444;
@@ -28,8 +28,9 @@
   button, .btn {
     font:inherit; cursor:pointer; border:1px solid var(--edge); background:var(--panel2);
     color:var(--txt); padding:7px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;
-    transition:background .12s,border-color .12s;
+    transition:background .12s,border-color .12s; text-decoration:none;
   }
+  a.btn, a.btn:hover { color:var(--txt); }
   button:hover, .btn:hover { background:#2c3142; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
   button.primary:hover { background:var(--accent2); }
@@ -74,6 +75,9 @@
   .meta .serial { font-weight:650; font-size:13px; word-break:break-all; }
   .meta .sub { color:var(--muted); font-variant-numeric:tabular-nums; }
   .tag { display:inline-block; padding:1px 6px; border-radius:5px; background:var(--panel2); border:1px solid var(--edge); color:var(--muted); font-size:11px; }
+  .card.invalid { border-color:#5a3030; }
+  .baddim { color:#ffb9b4; font-weight:600; }
+  .badtag { color:#ffb9b4; }
   .card .actions { display:flex; flex-wrap:wrap; gap:5px; margin-top:auto; }
 
   .empty { text-align:center; color:var(--muted); padding:40px; }
@@ -127,7 +131,11 @@
 </head>
 <body>
 <header>
-  <h1>SAROO Cover Tool <small>web edition · cover.bin</small></h1>
+  <h1>SAROO Cover Editor <small>web edition · cover.bin</small></h1>
+  <a class="btn" href="https://github.com/bucanero/saroo-cover-editor" target="_blank" rel="noopener noreferrer" title="Open source repository on GitHub">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
   <div class="spacer"></div>
   <button id="btnOpen">📂 Open cover.bin</button>
   <button id="btnNew">✨ New</button>
@@ -149,7 +157,10 @@
   </div>
 
   <div class="grid" id="grid"></div>
-  <div class="empty" id="emptyMsg" style="display:none">No covers loaded. Open a <code>cover.bin</code> or add an image.</div>
+  <div class="empty" id="emptyMsg" style="display:none">
+    No covers loaded. Open a <code>cover.bin</code> or add an image.<br><br>
+    <a href="#" id="lnkSample" title="Download and parse a sample cover.bin (~30 MB) from GitHub Releases">Load the latest <code>cover.bin</code> from GitHub.</a>
+  </div>
 </main>
 
 <!-- Add/Edit modal -->
@@ -351,16 +362,19 @@ function render(){
   $('bar').style.display = covers.length ? 'flex' : 'none';
   $('emptyMsg').style.display = covers.length ? 'none' : 'block';
   $('drop').style.display = covers.length ? 'none' : 'block';
-  $('count').textContent = `${covers.length} cover${covers.length!==1?'s':''}`;
+  const badCount = covers.filter(c=>!isValidSize(c.width,c.height)).length;
+  $('count').innerHTML = `${covers.length} cover${covers.length!==1?'s':''}` +
+    (badCount ? ` · <span class="badtag">⚠ ${badCount} invalid size</span>` : '');
   covers.forEach((c,idx)=>{
     if(q && !(c.serial.toLowerCase().includes(q) || hex8(c.hash).toLowerCase().includes(q))) return;
-    const card=document.createElement('div'); card.className='card';
+    const bad = !isValidSize(c.width,c.height);
+    const card=document.createElement('div'); card.className='card'+(bad?' invalid':'');
     const thumb=document.createElement('div'); thumb.className='thumb';
     const cv=coverToCanvas(c); cv.style.width='128px'; cv.style.height=(128*c.height/c.width)+'px';
     thumb.appendChild(cv); card.appendChild(thumb);
     const meta=document.createElement('div'); meta.className='meta';
     meta.innerHTML=`<div class="serial">${c.serial||'<em>no serial</em>'}</div>
-      <div class="sub">#${hex8(c.hash)} · ${c.width}×${c.height} · <span class="tag">${usedColors(c)} col</span></div>`;
+      <div class="sub">#${hex8(c.hash)} · <span class="${bad?'baddim':''}">${c.width}×${c.height}${bad?' ⚠':''}</span> · <span class="tag">${usedColors(c)} col</span></div>`;
     card.appendChild(meta);
     const act=document.createElement('div'); act.className='actions';
     const mk=(label,cls,fn)=>{ const b=document.createElement('button'); b.className='mini '+(cls||''); b.textContent=label; b.onclick=fn; return b; };
@@ -397,19 +411,17 @@ async function decodeToSource(file){
   return { srcCanvas:cv, lossless:null };
 }
 
-// mode: 'keep' | 'lossless' | 'fit' | '128x192' | '128x128'
+// SAROO only supports two cover sizes. Every other dimension is invalid.
+const VALID_SIZES = [[128,192],[128,128]];
+function isValidSize(w,h){ return w===128 && (h===128 || h===192); }
+// Pick the closest valid size for a source image by aspect ratio.
+function defaultSizeMode(sw,sh){ return (sh/sw) >= (160/128) ? '128x192' : '128x128'; }
+
+// mode: 'keep' | 'lossless' | '128x192' | '128x128'
 function processSource(src, mode){
   if(mode==='lossless' && src.lossless) return { ...src.lossless };
-  const sw=src.srcCanvas.width, sh=src.srcCanvas.height;
-  let tw, th;
-  if(mode==='128x192'){ tw=128; th=192; }
-  else if(mode==='128x128'){ tw=128; th=128; }
-  else { // 'fit'
-    const scale=Math.min(MAX_W/sw, MAX_H/sh);
-    tw=Math.max(4, Math.min(MAX_W, Math.round(sw*scale)));
-    th=Math.max(1, Math.min(MAX_H, Math.round(sh*scale)));
-    tw=Math.max(4, tw & ~3); // width multiple of 4 for BMP interop
-  }
+  const th = mode==='128x128' ? 128 : 192; // default 128x192
+  const tw = 128;
   const cv=document.createElement('canvas'); cv.width=tw; cv.height=th;
   const ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
   ctx.drawImage(src.srcCanvas,0,0,tw,th);
@@ -422,11 +434,13 @@ let edit = null; // { index, src, cover }
 
 function sizeOptions(src, currentW, currentH){
   const opts=[];
-  if(src && src.lossless) opts.push(['lossless',`Original BMP (${src.lossless.width}×${src.lossless.height}, lossless)`]);
-  if(edit && edit.index>=0 && !src) opts.push(['keep',`Keep current (${currentW}×${currentH})`]);
-  opts.push(['fit','Fit within 128×192 (keep aspect)']);
-  opts.push(['128x192','128 × 192 (stretch)']);
-  opts.push(['128x128','128 × 128 (stretch)']);
+  // Lossless / keep are only offered when the source is already a valid size.
+  if(src && src.lossless && isValidSize(src.lossless.width, src.lossless.height))
+    opts.push(['lossless',`Original BMP (${src.lossless.width}×${src.lossless.height}, lossless)`]);
+  if(edit && edit.index>=0 && !src && isValidSize(currentW, currentH))
+    opts.push(['keep',`Keep current (${currentW}×${currentH})`]);
+  opts.push(['128x192','128 × 192']);
+  opts.push(['128x128','128 × 128']);
   return opts;
 }
 
@@ -451,7 +465,10 @@ function refreshSizeSelect(){
   const cur = edit.index>=0 ? covers[edit.index] : null;
   const opts=sizeOptions(edit.src, cur?cur.width:0, cur?cur.height:0);
   for(const [v,label] of opts){ const o=document.createElement('option'); o.value=v; o.textContent=label; sel.appendChild(o); }
-  sel.value = opts[0][0];
+  // Default: preserve lossless/keep when available, else pick by source aspect.
+  if(opts[0][0]==='lossless' || opts[0][0]==='keep') sel.value=opts[0][0];
+  else if(edit.src) sel.value=defaultSizeMode(edit.src.srcCanvas.width, edit.src.srcCanvas.height);
+  else sel.value=opts[0][0];
 }
 
 function clearPreview(){ const cv=$('editPreview'); cv.width=128; cv.height=192; cv.getContext('2d').clearRect(0,0,128,192); $('editPalette').innerHTML=''; $('editInfo').textContent='Choose an image file to begin.'; }
@@ -462,7 +479,9 @@ function drawPreview(c){
   cv.getContext('2d').putImageData(coverToImageData(c),0,0);
   const pal=$('editPalette'); pal.innerHTML=''; const used=usedColors(c);
   for(let p=0;p<256;p++){ const i=document.createElement('i'); const v=c.palette[p]||0; i.style.background=`rgb(${(v>>16)&255},${(v>>8)&255},${v&255})`; pal.appendChild(i); }
-  $('editInfo').textContent=`${c.width}×${c.height} · ${used} colors used${c.width%4?' · ⚠ width not ×4 (may not round-trip through the C tool as BMP)':''}`;
+  const bad = !isValidSize(c.width,c.height);
+  $('editInfo').textContent=`${c.width}×${c.height} · ${used} colors used${bad?' · ⚠ invalid size — must be 128×128 or 128×192':''}`;
+  $('editInfo').style.color = bad ? '#ffb9b4' : '';
 }
 
 function reprocessAndPreview(){
@@ -476,9 +495,10 @@ function reprocessAndPreview(){
 $('editSize').onchange=()=>{
   if(edit.src) reprocessAndPreview();
   else if(edit.index>=0 && $('editSize').value!=='keep'){
-    // build a source from current cover and reprocess
+    // build a source from current cover and reprocess at the chosen size
+    const chosen=$('editSize').value;
     edit.src={ srcCanvas:coverToCanvas(covers[edit.index]), lossless:null };
-    refreshSizeSelect(); $('editSize').value = ['fit','128x192','128x128'].includes($('editSize').value)?$('editSize').value:'fit';
+    refreshSizeSelect(); $('editSize').value = chosen==='128x128' ? '128x128' : '128x192';
     reprocessAndPreview();
   }
 };
@@ -505,7 +525,7 @@ $('editSave').onclick=()=>{
   if(!edit.cover.indices.length){ err.textContent='No image loaded.'; return; }
   if(!serial){ err.textContent='Serial ID is required.'; return; }
   if(!/^[0-9A-Fa-f]{1,8}$/.test(hashStr)){ err.textContent='Hash must be 1–8 hex digits.'; return; }
-  if(edit.cover.width>MAX_W||edit.cover.height>MAX_H){ err.textContent=`Image exceeds ${MAX_W}×${MAX_H}.`; return; }
+  if(!isValidSize(edit.cover.width,edit.cover.height)){ err.textContent=`Invalid size ${edit.cover.width}×${edit.cover.height} — SAROO covers must be 128×128 or 128×192. Pick a size above.`; return; }
   const c={ serial, hash:parseInt(hashStr,16)>>>0, width:edit.cover.width, height:edit.cover.height, palette:edit.cover.palette, indices:edit.cover.indices };
   if(edit.index>=0) covers[edit.index]=c; else covers.push(c);
   $('editModal').classList.remove('show');
@@ -526,6 +546,24 @@ async function loadCoverBin(file){
 $('btnOpen').onclick=()=>$('fileOpen').click();
 $('fileOpen').onchange=e=>{ if(e.target.files[0]) loadCoverBin(e.target.files[0]); e.target.value=''; };
 
+// Sample cover.bin hosted on GitHub Releases (~30 MB).
+const SAMPLE_URL='https://github.com/bucanero/saroo-cover-editor/releases/download/2025-06-08/cover.bin';
+$('lnkSample').onclick=async(e)=>{
+  e.preventDefault();
+  if(covers.length && !confirm('Discard current covers and load the sample cover.bin?')) return;
+  const lnk=$('lnkSample'); const label=lnk.textContent; lnk.textContent='Downloading sample (~30 MB)…'; lnk.style.pointerEvents='none';
+  toast('Downloading sample cover.bin (~30 MB)…');
+  try{
+    const resp=await fetch(SAMPLE_URL);
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const buf=await resp.arrayBuffer();
+    covers=parseCoverBin(buf); render();
+    toast(`Loaded ${covers.length} covers from the sample cover.bin`,'ok');
+  }catch(err){
+    toast('Could not fetch sample: '+err.message+' — download it from the GitHub release and use Open cover.bin.','err');
+  }finally{ lnk.textContent=label; lnk.style.pointerEvents=''; }
+};
+
 $('btnNew').onclick=()=>{ if(covers.length && !confirm('Discard current covers and start empty?')) return; covers=[]; render(); toast('Started empty cover set'); };
 
 $('btnAdd').onclick=()=>$('fileAdd').click();
@@ -539,12 +577,14 @@ $('fileAdd').onchange=async e=>{
     if(meta){ $('editSerial').value=meta.serial; $('editHash').value=hex8(meta.hash); }
     return;
   }
-  // batch add with filename-derived metadata + fit sizing
+  // batch add with filename-derived metadata; snapped to the nearest valid size
   let added=0, skipped=0;
   for(const f of files){
     try{
       const src=await decodeToSource(f);
-      const c=processSource(src, src.lossless?'lossless':'fit');
+      const mode = (src.lossless && isValidSize(src.lossless.width, src.lossless.height))
+        ? 'lossless' : defaultSizeMode(src.srcCanvas.width, src.srcCanvas.height);
+      const c=processSource(src, mode);
       const meta=parseFilename(f.name);
       c.serial=meta?meta.serial:(f.name.replace(/\.[^.]+$/,'').slice(0,11));
       c.hash=meta?meta.hash:0;
@@ -558,6 +598,8 @@ $('fileAdd').onchange=async e=>{
 
 $('btnExport').onclick=()=>{
   if(!covers.length){ toast('Nothing to export','err'); return; }
+  const badSize=covers.filter(c=>!isValidSize(c.width,c.height));
+  if(badSize.length && !confirm(`${badSize.length} cover(s) are NOT 128×128 or 128×192 (e.g. "${badSize[0].serial}" ${badSize[0].width}×${badSize[0].height}). SAROO may not display them. Export anyway?`)) return;
   const missing=covers.filter(c=>!c.serial);
   if(missing.length && !confirm(`${missing.length} cover(s) have no serial ID and will be skipped by SAROO. Export anyway?`)) return;
   const bytes=buildCoverBin(covers);

@@ -1,4 +1,4 @@
-# SAROO Cover Tool — Web Edition
+# SAROO Cover Editor — Web Edition
 
 A self-contained, **browser-based** version of the SAROO [`covertool`](https://github.com/tpunix/SAROO/tree/master/tools/covertool) CLI.
 Open, view, edit and rebuild SAROO's `cover.bin` cover-image database entirely in
@@ -28,15 +28,17 @@ Covers you add or edit live in memory until you **Export cover.bin**.
 Covers are stored exactly as the CLI stores them:
 
 - **8-bit, 256-color palette**, uncompressed
-- Max size **128 × 192** (128 × 128 is also common)
+- Size is **exactly 128 × 192 or 128 × 128** — no other dimension is valid
 
 When you add a `.png` (or any true-color image), it is automatically **quantized to a
-256-color palette** (median-cut) and resized to fit. `.bmp` files that are already
-8-bit/256-color are imported losslessly. When exporting a single cover as `.bmp`, the
-output is a standard 8-bit BMP that round-trips through the CLI.
+256-color palette** (median-cut) and **snapped to whichever valid size best matches its
+aspect ratio** (you can override the choice in the editor). `.bmp` files that are already
+8-bit/256-color at a valid size are imported losslessly. When exporting a single cover as
+`.bmp`, the output is a standard 8-bit BMP that round-trips through the CLI.
 
-> Tip: keep image width a multiple of 4 (the default "Fit" sizing does this) so the
-> exported `.bmp` stays byte-for-byte compatible with the CLI's raw-row reader.
+The app enforces the two valid sizes: the editor only offers 128 × 192 / 128 × 128 and
+refuses to save anything else, and covers loaded from an existing `cover.bin` with a
+non-conforming size are flagged (red border + dimension) with a warning before export.
 
 ## Compatibility
 
